@@ -2,6 +2,7 @@ package com.substainable.jetpackcomposetutorial
 
 import android.content.res.Configuration
 import android.os.Bundle
+import android.provider.ContactsContract.Profile
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -38,13 +39,33 @@ import androidx.compose.runtime.setValue
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             JetpackComposeTutorialTheme {
-                Conversation(SampleData.conversationSample)
+                // Create NavController for navigation
+                val navController = rememberNavController()
+
+                // Set up navigation host
+                NavHost(navController = navController, startDestination = "conversation") {
+                    // Conversation screen
+                    composable("conversation") {
+                        ConversationScreen(SampleData.conversationSample, navController)  // Pass NavController to ConversationScreen
+                    }
+
+                    // Profile screen
+                    composable("profile") {
+                        ProfileScreen(navController)  // Profile screen
+                    }
+                }
             }
         }
     }
@@ -53,7 +74,7 @@ class MainActivity : ComponentActivity() {
 data class Message(val author: String, val body: String)
 
 @Composable
-fun MessageCard(msg: Message) {
+fun MessageCard(msg: Message, navController: NavController) {
     Row (modifier = Modifier.padding(all = 8.dp)) {
         Image(
             painter = painterResource(R.drawable.kallio),
@@ -64,6 +85,9 @@ fun MessageCard(msg: Message) {
                 // Clip image to be shaped as a circle
                 .clip(CircleShape)
                 .border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                .clickable {
+                    navController.navigate("profile")
+                }
         )
         Spacer(modifier = Modifier.width(8.dp))
 
@@ -102,36 +126,36 @@ fun MessageCard(msg: Message) {
 }
 
 @Composable
-fun Conversation(messages: List<Message>) {
+fun ConversationScreen(messages: List<Message>, navController: NavController) {
     LazyColumn {
         items(messages) { message ->
-            MessageCard(message)
+            MessageCard(message, navController)
         }
     }
 }
 
-@Preview
-@Composable
-fun PreviewConversation() {
-    JetpackComposeTutorialTheme {
-        Conversation(SampleData.conversationSample)
-    }
-}
-
-@Preview(name = "Light Mode")
-@Preview(
-    uiMode = Configuration.UI_MODE_NIGHT_YES,
-    showBackground = true,
-    name = "Dark Mode"
-)
 
 @Composable
-fun PreviewMessageCard() {
+fun ProfileScreen(navController: NavController) {
     JetpackComposeTutorialTheme {
-        Surface {
-            MessageCard(
-                msg = Message("joku", "tekstiä")
+        Column(modifier = Modifier.padding(16.dp)) {
+            Image(
+                painter = painterResource(R.drawable.kallio),
+                contentDescription = "Profile Picture",
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
             )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = "Jokunen", style = MaterialTheme.typography.titleSmall)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Somebody is somebody, biography anf stuff.", style = MaterialTheme.typography.bodyMedium)
+            TextButton(
+                onClick = { navController.popBackStack() }
+            ) {
+                Text("Go Back")
+            }
         }
     }
 }
