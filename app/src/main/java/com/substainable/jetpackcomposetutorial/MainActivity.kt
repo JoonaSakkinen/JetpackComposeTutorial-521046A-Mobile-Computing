@@ -1,7 +1,17 @@
 package com.substainable.jetpackcomposetutorial
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -9,6 +19,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,39 +30,33 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.border
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.substainable.jetpackcomposetutorial.ui.theme.JetpackComposeTutorialTheme
-
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationCompat
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import com.substainable.jetpackcomposetutorial.ui.theme.JetpackComposeTutorialTheme
 import java.io.File
 import java.io.FileOutputStream
 
@@ -56,6 +64,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             JetpackComposeTutorialTheme {
                 // Create NavController for navigation
@@ -82,6 +91,103 @@ class MainActivity : ComponentActivity() {
 }
 
 data class Message(val body: String)
+
+@Composable
+fun AccelerometerListener() {
+    val context = LocalContext.current
+    val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+    var accelerometerData by remember { mutableStateOf("X: 0, Y: 0, Z: 0") }
+
+    val sensorEventListener = rememberUpdatedState(
+        object : SensorEventListener {
+            var lastX = 0f
+            var lastY = 0f
+            var lastZ = 0f
+
+            override fun onSensorChanged(event: SensorEvent?) {
+                if (event != null && event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
+                    val x = event.values[0]
+                    val y = event.values[1]
+                    val z = event.values[2]
+                    accelerometerData = "X: ${x}, Y: ${y}, Z: ${z}"
+
+                    // Update the notification
+
+                    if (lastX == 0f && lastY == 0f && lastZ == 0f) {
+                        lastX = x
+                        lastY = y
+                        lastZ = z
+                    }
+
+                    if (Math.abs(x - lastX) > 1 || Math.abs(y - lastY) > 1 || Math.abs(z - lastZ) > 1) {
+                        accelerometerData = "X: $x, Y: $y, Z: $z"
+                        showNotification(context, accelerometerData)
+                        lastX = x
+                        lastY = y
+                        lastZ = z
+                    }
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+    )
+
+    LaunchedEffect(true) {
+        sensorManager.registerListener(
+            sensorEventListener.value,
+            accelerometer,
+            SensorManager.SENSOR_DELAY_UI
+        )
+    }
+
+    // Display accelerometer data
+    Text(text = "Accelerometer Data: $accelerometerData")
+}
+
+fun showNotification(context: Context, data: String) {
+    // Create a PendingIntent that will open the MainActivity
+    val intent = Intent(context, MainActivity::class.java).apply {
+        // Adding extra data to the intent
+        putExtra("acceleration_data", data)
+    }
+
+    val pendingIntent: PendingIntent = PendingIntent.getActivity(
+        context,
+        0, // Request code
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    // Create the NotificationManager
+    val notificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    // Create NotificationChannel if not created already
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+            "accelerometer_channel",
+            "Accelerometer Data",
+            NotificationManager.IMPORTANCE_DEFAULT
+        )
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    // Build the notification
+    val notification: Notification = NotificationCompat.Builder(context, "accelerometer_channel")
+        .setContentTitle("Accelerometer detected a change: ")
+        .setContentText(data)
+        .setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .setContentIntent(pendingIntent) // Set the PendingIntent for the notification click
+        .setAutoCancel(true) // Automatically dismiss the notification when clicked
+        .build()
+
+    // Send the notification
+    notificationManager.notify(1, notification)
+}
 
 @Composable
 fun MessageCard(msg: Message, navController: NavController) {
@@ -200,6 +306,9 @@ fun ProfileScreen(navController: NavController) {
             mutableStateOf("")
         }
         Column(modifier = Modifier.padding(16.dp)) {
+            // launching Acc listener
+            AccelerometerListener()
+
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(profileImage ?: R.drawable.kallio)
@@ -248,6 +357,31 @@ fun ProfileScreen(navController: NavController) {
             }
         }
     }
+}
+
+fun sendTestNotification(context: Context) {
+    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    // Create notification channel
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+            "test_channel",
+            "Test Notifications",
+            NotificationManager.IMPORTANCE_DEFAULT
+        )
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    // Build the notification
+    val notification = NotificationCompat.Builder(context, "test_channel")
+        .setContentTitle("Test Notification")
+        .setContentText("This is a test notification.")
+        .setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .build()
+
+    // Send the notification
+    notificationManager.notify(1, notification)
 }
 
 fun saveImageToInternalStorage(context: Context, uri: Uri): File? {
