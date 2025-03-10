@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Internal storage (app's private files) -->
+    <files-path
+        name="internal_files"
+        path="." />
+
+    <!-- External storage (if you want to allow external files access in the future) -->
+    <external-path
+        name="external_files"
+        path="." />
+</paths>
