@@ -217,7 +217,7 @@ fun ConversationScreen(navController: NavController) {
             val photoFile = File(context.filesDir, "message_photo_${System.currentTimeMillis()}.jpg")
             val photoUri = FileProvider.getUriForFile(
                 context,
-                "com.substainable.jetpackcomposetutorial.provider",  // Your app's package + .provider
+                "com.substainable.jetpackcomposetutorial.provider",  // Package + .provider
                 photoFile
             )
             CoroutineScope(Dispatchers.IO).launch {
@@ -233,7 +233,7 @@ fun ConversationScreen(navController: NavController) {
             val photoFile = File(context.filesDir, "message_photo_${System.currentTimeMillis()}.jpg")
             val photoUri = FileProvider.getUriForFile(
                 context,
-                "com.substainable.jetpackcomposetutorial.provider",  // Your app's package + .provider
+                "com.substainable.jetpackcomposetutorial.provider",  // Package + .provider
                 photoFile
             )
             takePicture.launch(photoUri)
@@ -397,9 +397,6 @@ fun ProfileScreen(navController: NavController) {
             style = MaterialTheme.typography.titleLarge
         )
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Profile options like changing username or profile picture could go here.
-        // If needed, a feature to update profile details (like username) can be added
     }
 }
 
